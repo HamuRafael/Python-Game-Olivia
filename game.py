@@ -1,5 +1,6 @@
 import pygame
 import sys
+import random
 
 # -----------------------
 # CONFIGURAÇÕES INICIAIS
@@ -101,6 +102,7 @@ class Player(pygame.sprite.Sprite):
                     self.rect.top = p.rect.bottom
                     self.vel_y = 0
 
+
 class Platform(pygame.sprite.Sprite):
     def __init__(self, x, y, w, h, image=None):
         super().__init__()
@@ -113,6 +115,7 @@ class Platform(pygame.sprite.Sprite):
 
     def update(self, *args):
         pass
+
 
 class Enemy(pygame.sprite.Sprite):
     """
@@ -133,6 +136,7 @@ class Enemy(pygame.sprite.Sprite):
         if self.rect.x < self.min_val or self.rect.x > self.max_val:
             self.speed = -self.speed
 
+
 class Olivia(pygame.sprite.Sprite):
     def __init__(self, x, y, image):
         super().__init__()
@@ -141,6 +145,7 @@ class Olivia(pygame.sprite.Sprite):
 
     def update(self, *args):
         pass
+
 
 # -----------------------
 # FASES (LEVEL DESIGN)
@@ -151,7 +156,6 @@ def create_level_data(level):
     inimigos_data é uma lista de tuplas: (x, y, min_val, max_val, speed)
     """
     if level == 0:  # Fase de tutorial
-        # Uma grande plataforma ocupando o "chão" (y=550, 800 de largura)
         level_platforms = [
             (0, 550, 800, 50),
         ]
@@ -166,8 +170,8 @@ def create_level_data(level):
         level_platforms = [
             (0, 550, 800, 50),
         ]
-        start_pos1 = (50, 450)
-        start_pos2 = (120, 450)
+        start_pos1 = (90, 450)
+        start_pos2 = (50, 450)
         inimigos_data = [
             (300, 510, 50, 750, 2),
             (500, 510, 50, 750, 3),
@@ -179,8 +183,8 @@ def create_level_data(level):
             (0, 550, 400, 50),
             (500, 450, 300, 50),
         ]
-        start_pos1 = (50, 450)
-        start_pos2 = (120, 450)
+        start_pos1 = (90, 450)
+        start_pos2 = (50, 450)
         inimigos_data = [
             (190, 510, 50, 360, 2),
             (600, 410, 500, 760, 3),
@@ -193,8 +197,8 @@ def create_level_data(level):
             (300, 450, 200, 50),
             (600, 350, 200, 50),
         ]
-        start_pos1 = (50, 450)
-        start_pos2 = (100, 450)
+        start_pos1 = (90, 450)
+        start_pos2 = (50, 450)
         inimigos_data = [
             (190, 510, 0, 160, 1),
             (350, 410, 300, 460, 1),
@@ -209,8 +213,8 @@ def create_level_data(level):
             (400, 350, 150, 50),
             (600, 250, 150, 50),
         ]
-        start_pos1 = (50, 450)
-        start_pos2 = (120, 450)
+        start_pos1 = (85, 450)
+        start_pos2 = (50, 450)
         inimigos_data = [
             (200, 510, 50, 760, 0),
             (230, 410, 200, 310, 0),
@@ -228,7 +232,7 @@ def create_level_data(level):
 def main():
     pygame.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Aventuras de Ana e Rafa (Horizontais + Mensagem Final 2 telas)")
+    pygame.display.set_caption("Aventuras de Ana e Rafa ")
     clock = pygame.time.Clock()
 
     # Carrega imagens
@@ -243,9 +247,6 @@ def main():
     bg_final1 = load_image("assets/final1.png", WIDTH, HEIGHT)
     bg_final2 = load_image("assets/final2.png", WIDTH, HEIGHT)
 
-    # NOVO: background da história
-    story_bg = load_image("assets/story_bg.png", WIDTH, HEIGHT)
-
     arrow_image  = load_image("assets/arrow.png", 60, 60)
     arrow_rect = pygame.Rect(WIDTH - 70, HEIGHT - 70, 60, 60)
 
@@ -256,7 +257,7 @@ def main():
     player1_keys = {'left': pygame.K_a, 'right': pygame.K_d, 'jump': pygame.K_w}
     player2_keys = {'left': pygame.K_LEFT, 'right': pygame.K_RIGHT, 'jump': pygame.K_UP}
 
-    # Estados do jogo (ADICIONAMOS "STORY")
+    # Estados do jogo
     game_state = "MENU"
     current_level = 0
     max_levels = 5
@@ -268,12 +269,17 @@ def main():
     p2_touched_olivia = False
     olivia_sprite = None
 
+    # Mensagens finais (2 páginas)
     final_messages = [
         "Parabéns por salvar a Olivia! Vocês foram incríveis!",
-        "Quer namorar comigo?"
+        ""
     ]
     final_page = 0
 
+    # Posição do botão NÃO (foge)
+    no_pos = [600, 400]  # Ajuste como preferir
+
+    # GRUPOS
     platforms = pygame.sprite.Group()
     enemies   = pygame.sprite.Group()
     all_sprites = pygame.sprite.Group()
@@ -318,9 +324,18 @@ def main():
         end_x = 750 if level < max_levels else 9999
         return pl1, pl2, end_x
 
+    # Inicializa a fase 0 no seu caso (tutorial)
+    # -> Se quiser outra lógica, mantenha como está
+    def reset_game():
+        nonlocal current_level, player1, player2, level_end_x
+        current_level = 0
+        player1, player2, level_end_x = start_level(current_level)
+
+    # INÍCIO DO LOOP
     while True:
         clock.tick(FPS)
 
+        # Capturar eventos
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -335,19 +350,11 @@ def main():
                         selected_option = (selected_option + 1) % len(menu_options)
                     elif event.key in [pygame.K_RETURN, pygame.K_KP_ENTER]:
                         if selected_option == 0:  # Iniciar
-                            # Agora, antes de jogar, vamos pra "STORY"
-                            game_state = "STORY"
+                            reset_game()
+                            game_state = "PLAY"
                         else:  # Sair
                             pygame.quit()
                             sys.exit()
-
-            elif game_state == "STORY":
-                # Se apertar ENTER, começamos a fase 0
-                if event.type == pygame.KEYDOWN:
-                    if event.key in [pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE]:
-                        current_level = 0
-                        player1, player2, level_end_x = start_level(current_level)
-                        game_state = "PLAY"
 
             elif game_state == "PLAY":
                 if event.type == pygame.KEYDOWN:
@@ -358,21 +365,45 @@ def main():
 
             elif game_state == "GAME_OVER":
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
-                    current_level = 0
-                    player1, player2, level_end_x = start_level(current_level)
+                    reset_game()
                     game_state = "PLAY"
 
             elif game_state == "WIN":
+                # Checamos cliques do mouse
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    mx, my = event.pos
+
+                    # Se final_page == 1, significa a página do "Quer namorar comigo?"
+                    # Vamos ver se clicou no "Sim"
+                    if final_page == 1:
+                        # Precisamos recriar os rects do Sim/Não 
+                        # pra checar clique após desenhá-los
+                        yes_surf = font_menu.render("Sim", True, BLACK)
+                        yes_rect = yes_surf.get_rect(center=(WIDTH//2 - 100, HEIGHT//2 + 50))
+
+                        no_surf = font_menu.render("Não", True, BLACK)
+                        no_rect = no_surf.get_rect(center=(no_pos[0], no_pos[1]))
+
+                        # Se clicou em SIM
+                        if yes_rect.collidepoint(mx, my):
+                            print("Clicou em SIM! :)")
+                            # Aqui você pode mudar de estado, 
+                            # ou exibir outra mensagem etc.
+
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     mx, my = event.pos
                     if final_page < len(final_messages) - 1:
-                        if arrow_rect.collidepoint(mx, my):
+                        # Se ainda está na primeira página (final_page == 0),
+                        # verifique clique na seta
+                        if arrow_rect.collidepoint(mx, my) and final_page == 0:
                             final_page += 1
+
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         game_state = "MENU"
                         final_page = 0
 
+        # LÓGICA DE JOGO
         if game_state == "PLAY":
             player1.handle_input()
             player2.handle_input()
@@ -380,29 +411,33 @@ def main():
             all_sprites.update(platforms)
             enemies.update()
 
+            # Colisão com inimigos => GAME_OVER
             if pygame.sprite.spritecollide(player1, enemies, False) or \
                pygame.sprite.spritecollide(player2, enemies, False):
                 game_state = "GAME_OVER"
 
+            # Cair da tela => GAME_OVER
             if player1.rect.top > HEIGHT or player2.rect.top > HEIGHT:
                 game_state = "GAME_OVER"
 
+            # Se não for fase final (4), passamos se x >= 750
             if current_level < 4:
                 if (player1.rect.x >= level_end_x) and (player2.rect.x >= level_end_x):
                     current_level += 1
                     player1, player2, level_end_x = start_level(current_level)
             else:
+                # Fase 4 => checar Olivia
                 if olivia_sprite:
-                    if olivia_sprite.rect.colliderect(player1.rect):
+                    if olivia_sprite.rect.collidepoint(player1.rect.center):
                         p1_touched_olivia = True
-                    if olivia_sprite.rect.colliderect(player2.rect):
+                    if olivia_sprite.rect.collidepoint(player2.rect.center):
                         p2_touched_olivia = True
                     if p1_touched_olivia and p2_touched_olivia:
                         game_state = "WIN"
                         final_page = 0
 
         # DESENHO
-        if game_state == "MENU":
+        if game_state == 'MENU':
             screen.blit(bg_menu, (0,0))
             title_surf = font_title.render("", True, BLACK)
             title_rect = title_surf.get_rect(center=(WIDTH//2, 120))
@@ -414,20 +449,16 @@ def main():
                 rect_opt = surf_opt.get_rect(center=(WIDTH//2, 300 + i*60))
                 screen.blit(surf_opt, rect_opt)
 
-        elif game_state == "STORY":
-            # Exibe o background de história
-            screen.blit(story_bg, (0,0))
-            # Se quiser, desenhe algo como "Press ENTER to continue"
-            press_surf = font_small.render("", True, RED)
-            press_rect = press_surf.get_rect(center=(WIDTH//2, HEIGHT - 50))
-            screen.blit(press_surf, press_rect)
-
-        elif game_state == "PLAY":
+        else:
+            # Desenha fundo do jogo normal
             screen.blit(bg_image, (0, 0))
+
+        if game_state == "PLAY":
             all_sprites.draw(screen)
             enemies.draw(screen)
 
         elif game_state == "GAME_OVER":
+            # Tela de game over
             screen.blit(game_over_bg, (0, 0))
             font_small2 = pygame.font.SysFont("Arial", 30)
             msg = font_small2.render("", True, BLACK)
@@ -435,12 +466,39 @@ def main():
             screen.blit(msg, rect_msg)
 
         elif game_state == "WIN":
+            # 2 PÁGINAS FINAIS
             if final_page == 0:
+                # Primeira: exibe bg_final1
                 screen.blit(bg_final1, (0, 0))
-            else:
-                screen.blit(bg_final2, (0, 0))
-            if final_page < len(final_messages) - 1:
+                # Desenha a seta para avançar
                 screen.blit(arrow_image, arrow_rect)
+            else:
+                # Segunda: exibe bg_final2 + pergunta
+                screen.blit(bg_final2, (0, 0))
+
+                # Pergunta (se quiser texto extra):
+                question_surf = font_menu.render(final_messages[1], True, BLACK)
+                question_rect = question_surf.get_rect(center=(WIDTH//2, HEIGHT//2 - 100))
+                screen.blit(question_surf, question_rect)
+
+                # Botão "Sim"
+                yes_surf = font_menu.render("Sim", True, BLACK)
+                yes_rect = yes_surf.get_rect(center=(250, 400))
+                screen.blit(yes_surf, yes_rect)
+
+                # Botão "Não" (foge)
+                no_surf = font_menu.render("Não", True, BLACK)
+                no_rect = no_surf.get_rect(center=(no_pos[0], no_pos[1]))
+                screen.blit(no_surf, no_rect)
+
+                # Checa mouse:
+                mx, my = pygame.mouse.get_pos()
+                # Se mouse chegar perto do "Não", move
+                dist_no = ((mx - no_rect.centerx)**2 + (my - no_rect.centery)**2)**0.5
+                if dist_no < 50:
+                    # Mover pra posição aleatória
+                    no_pos[0] = random.randint(100, WIDTH-100)
+                    no_pos[1] = random.randint(100, HEIGHT-100)
 
         pygame.display.flip()
 
